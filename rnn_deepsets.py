@@ -9,6 +9,9 @@ from torch.autograd import Variable
 NetIO = Union[FloatTensor, Variable]
 
 
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+  
 
 class InvariantModel(nn.Module):
     def __init__(self, phi: nn.Module, rho: nn.Module):
@@ -81,6 +84,25 @@ class DeepSetDecoder(nn.Module):
         x = self.fc2(x)
         return x
 
+class RNNWithDeepSetInitialization(nn.Module):
+    def __init__(self, input_dim, rnn_hidden_dim):
+        super().__init__()
+        self.input_dim = input_dim
+        self.rnn_hidden_dim = rnn_hidden_dim
+        
+        phi = DeepSetEncoder(input_dim, 32)
+        rho = DeepSetDecoder(input_size=32, output_size=rnn_hidden_dim)
+        self.deepset = InvariantModel(phi=phi, rho=rho)    
+        self.gru = nn.GRU(input_dim, rnn_hidden_dim, batch_first=True)
+
+    def forward(self, x):
+        h0 = self.deepset(x).unsqueeze(2).permute(2,0,1) # feed X to deep set, to get h0 of RNN
+        #print("Initial hidden shape: {}".format(h0.shape))
+        x = x.permute(0,2,1)
+        #print("RNN input shape {}".format(x.shape))
+        y, h = self.gru(x, h0) # call RNN with initial hidden state h0
+        return y
+
         
 if __name__ == "__main__":
     nb = 32
@@ -88,20 +110,13 @@ if __name__ == "__main__":
     x_dim = 256
     rnn_hidden_dim = 64
 
+    model = RNNWithDeepSetInitialization(x_dim, rnn_hidden_dim)
+    x = torch.randn(nb,x_dim,seq_len)
+    y = model(x)
 
-
-    phi = DeepSetEncoder(x_dim, 32)
-    rho = DeepSetDecoder(input_size=32, output_size=rnn_hidden_dim)
-    deepset = InvariantModel(phi=phi, rho=rho)    
-    gru = nn.GRU(x_dim, rnn_hidden_dim, batch_first=True)
-   
-
-    X = torch.randn(nb,x_dim,seq_len) # batch of input sequences
-    h0 = deepset(X).unsqueeze(2).permute(2,0,1) # feed X to deep set, to get h0 of RNN
-    print("Initial hidden shape: {}".format(h0.shape))
-    X = X.permute(0,2,1)
-    print("RNN input shape {}".format(X.shape))
-    y, h = gru(X, h0) # call RNN with initial hidden state h0
     print("RNN output shape {}".format(y.shape))
+    print("Parameter count: {}".format(count_parameters(model)))
+    print("Parameter count gru only: {}".format(count_parameters(model.gru)))
+
 
     # possible recurssion in h0... 
