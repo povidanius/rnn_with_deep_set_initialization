@@ -144,6 +144,9 @@ if __name__ == "__main__":
     print("RNN output shape {}".format(y.shape))
     print("Parameter count: {}".format(count_parameters(model)))
     print("Parameter count gru only: {}".format(count_parameters(model.gru)))
+
+    print("Set transformer based:")
+    print("RNN output shape {}".format(y1.shape))
     print("Parameter set transformer only: {}".format(count_parameters(model1.set_transformer)))
 
 
