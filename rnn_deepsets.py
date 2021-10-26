@@ -149,6 +149,8 @@ if __name__ == "__main__":
 
     model1 = RNNWithSetTransformerInitialization(x_dim, rnn_hidden_dim, rnn_input_dim)
     x1 = torch.randn(nb,x_dim,seq_len)
+    y1 = model1(x1)
+
 
     model2 = ConditionalRNNProcess(x_dim, rnn_hidden_dim, rnn_input_dim)
     x2 = torch.randn(nb,x_dim,seq_len)
