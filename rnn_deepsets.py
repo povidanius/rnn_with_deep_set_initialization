@@ -84,28 +84,6 @@ class DeepSetDecoder(nn.Module):
         x = self.fc2(x)
         return x
 
-class RNNWithSetTransformerInitialization(nn.Module):
-        def __init__(self, input_dim, rnn_hidden_dim):
-            super().__init__()
-            self.input_dim = input_dim
-            self.rnn_hidden_dim = rnn_hidden_dim
-            
-            #phi = DeepSetEncoder(input_dim, 32)
-            #rho = DeepSetDecoder(input_size=32, output_size=rnn_hidden_dim)
-            #self.deepset = InvariantModel(phi=phi, rho=rho)    
-
-            self.set_transformer= SetTransformer(4, 24, 64)
-            self.gru = nn.GRU(input_dim, rnn_hidden_dim, batch_first=True)
-
-        def forward(self, x):
-            h0 = self.deepset(x).unsqueeze(2).permute(2,0,1) # feed X to deep set, to get h0 of RNN
-            #print("Initial hidden shape: {}".format(h0.shape))
-            x = x.permute(0,2,1)
-            #print("RNN input shape {}".format(x.shape))
-            y, h = self.gru(x, h0) # call RNN with initial hidden state h0
-            return y
-
-
 class RNNWithDeepSetInitialization(nn.Module):
     def __init__(self, input_dim, rnn_hidden_dim):
         super().__init__()
@@ -125,7 +103,24 @@ class RNNWithDeepSetInitialization(nn.Module):
         y, h = self.gru(x, h0) # call RNN with initial hidden state h0
         return y
 
-        
+
+class RNNWithSetTransformerInitialization(nn.Module):
+        def __init__(self, input_dim, rnn_hidden_dim):
+            super().__init__()
+            self.input_dim = input_dim
+            self.rnn_hidden_dim = rnn_hidden_dim
+
+            self.set_transformer= SetTransformer(4, 24, 64)
+            self.gru = nn.GRU(input_dim, rnn_hidden_dim, batch_first=True)
+
+        def forward(self, x):
+            h0 = self.deepset(x).unsqueeze(2).permute(2,0,1) # feed X to deep set, to get h0 of RNN
+            #print("Initial hidden shape: {}".format(h0.shape))
+            x = x.permute(0,2,1)
+            #print("RNN input shape {}".format(x.shape))
+            y, h = self.gru(x, h0) # call RNN with initial hidden state h0
+            return y
+
 if __name__ == "__main__":
     nb = 32
     seq_len = 128
@@ -140,7 +135,7 @@ if __name__ == "__main__":
     x1 = torch.randn(nb,x_dim,seq_len)
     y1 = model(x)
 
-
+    print("Deep set based:")
     print("RNN output shape {}".format(y.shape))
     print("Parameter count: {}".format(count_parameters(model)))
     print("Parameter count gru only: {}".format(count_parameters(model.gru)))
