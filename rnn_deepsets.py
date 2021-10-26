@@ -102,9 +102,9 @@ class RNNWithSetTransformerInitialization(nn.Module):
 
         def forward(self, x):
             x = x.permute(0,2,1)
-            print("Input shape {}".format(x.shape))
+            #print("Input shape {}".format(x.shape))
             h0 = self.set_transformer(x).permute(1,0,2) 
-            print("Initial hidden shape: {}".format(h0.shape))
+            #print("Initial hidden shape: {}".format(h0.shape))
             #print("RNN input shape {}".format(x.shape))
             y, h = self.gru(x, h0) # call RNN with initial hidden state h0
             return y
@@ -122,8 +122,8 @@ class ConditionalRNNProcess(nn.Module):
         def forward(self, x_meta, x):
             x_meta = x_meta.permute(0,2,1)
             #print("x_meta shape {}".format(x_meta.shape))
-            h0 = self.set_transformer(x_meta).squeeze()#.permute(1,0,2) 
-            #print("Set transformer output shape: {}".format(h0.shape))
+            h0 = self.set_transformer(x_meta).squeeze()
+            print("Set transformer output shape: {}".format(h0.shape))
             h0 =  torch.sum(h0, dim=0, keepdim=True).unsqueeze(1)
             #print("Initial hidden shape {}".format(h0.shape))
             h0 = h0.repeat(x.shape[0],1,1).permute(1,0,2) 
@@ -155,6 +155,9 @@ if __name__ == "__main__":
     model2 = ConditionalRNNProcess(x_dim, rnn_hidden_dim, rnn_input_dim)
     x2 = torch.randn(nb,x_dim,seq_len)
     x_cond = torch.randn(nb_meta,x_dim,seq_len)
+
+    y2 = model2(x_cond, x1)
+    x_cond = torch.randn(15,x_dim,seq_len)
 
     y2 = model2(x_cond, x1)
 
