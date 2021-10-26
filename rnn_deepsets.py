@@ -109,7 +109,34 @@ class RNNWithSetTransformerInitialization(nn.Module):
             y, h = self.gru(x, h0) # call RNN with initial hidden state h0
             return y
 
+class ConditionalRNNProcess(nn.Module):
+        def __init__(self, input_dim, rnn_hidden_dim, rnn_input_dim):
+            super().__init__()
+            self.input_dim = input_dim
+            self.rnn_hidden_dim = rnn_hidden_dim
+            self.rnn_input_dim = rnn_input_dim
+
+            self.set_transformer= SetTransformer(x_dim, 1, rnn_hidden_dim)
+            self.gru = nn.GRU(input_dim, rnn_hidden_dim, batch_first=True)
+
+        def forward(self, x_meta, x):
+            x_meta = x_meta.permute(0,2,1)
+            #print("x_meta shape {}".format(x_meta.shape))
+            h0 = self.set_transformer(x_meta).squeeze()#.permute(1,0,2) 
+            #print("Set transformer output shape: {}".format(h0.shape))
+            h0 =  torch.sum(h0, dim=0, keepdim=True).unsqueeze(1)
+            #print("Initial hidden shape {}".format(h0.shape))
+            h0 = h0.repeat(x.shape[0],1,1).permute(1,0,2) 
+            #print(x.shape)
+            #print("Initial hidden shape1 {}".format(h0.shape))
+
+            x = x.permute(0,2,1)
+            y, h = self.gru(x, h0) # call RNN with initial hidden state h0
+            return y
+
+
 if __name__ == "__main__":
+    nb_meta = 512
     nb = 32
     seq_len = 128
     x_dim = 256
@@ -122,7 +149,12 @@ if __name__ == "__main__":
 
     model1 = RNNWithSetTransformerInitialization(x_dim, rnn_hidden_dim, rnn_input_dim)
     x1 = torch.randn(nb,x_dim,seq_len)
-    y1 = model1(x1)
+
+    model2 = ConditionalRNNProcess(x_dim, rnn_hidden_dim, rnn_input_dim)
+    x2 = torch.randn(nb,x_dim,seq_len)
+    x_cond = torch.randn(nb_meta,x_dim,seq_len)
+
+    y2 = model2(x_cond, x1)
 
     print("Deep set based:")
     print("RNN output shape {}".format(y.shape))
@@ -132,4 +164,8 @@ if __name__ == "__main__":
     print("Set transformer based:")
     print("RNN output shape {}".format(y1.shape))
     print("Parameter set transformer only: {}".format(count_parameters(model1.set_transformer)))
+    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    print("Conditional RNN process:")
+    print("RNN output shape {}".format(y2.shape))
+    print("Parameter set transformer only: {}".format(count_parameters(model2.set_transformer)))    
 
