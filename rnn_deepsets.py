@@ -22,23 +22,9 @@ class InvariantModel(nn.Module):
     def forward(self, x: NetIO) -> NetIO:
         # compute the representation for each data point
         x = self.phi.forward(x)
-
-
-
-        # sum up the representations
-        # here I have assumed that x is 2D and the each row is representation of an input, so the following operation
-        # will reduce the number of rows to 1, but it will keep the tensor as a 2D tensor.
-        print("encoder")
-        print(x.shape)
         x = torch.sum(x, dim=2, keepdim=False)        
         #x = torch.quantile(x, 0.75, dim=2, keepdim=False)
-
-        print("representatioon shape")
-        print(x.shape)
-
-        # compute the output
         out = self.rho.forward(x)
-
         return out
 
 
@@ -79,7 +65,7 @@ class DeepSetDecoder(nn.Module):
         self.fc2 = nn.Linear(10, self.output_size)
 
     def forward(self, x: NetIO) -> NetIO:
-        print("decoder input {}".format(x.shape))
+        #print("decoder input {}".format(x.shape))
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
@@ -105,18 +91,20 @@ class RNNWithDeepSetInitialization(nn.Module):
 
 
 class RNNWithSetTransformerInitialization(nn.Module):
-        def __init__(self, input_dim, rnn_hidden_dim):
+        def __init__(self, input_dim, rnn_hidden_dim, rnn_input_dim):
             super().__init__()
             self.input_dim = input_dim
             self.rnn_hidden_dim = rnn_hidden_dim
+            self.rnn_input_dim = rnn_input_dim
 
-            self.set_transformer= SetTransformer(4, 24, 64)
+            self.set_transformer= SetTransformer(x_dim, 1, rnn_hidden_dim)
             self.gru = nn.GRU(input_dim, rnn_hidden_dim, batch_first=True)
 
         def forward(self, x):
-            h0 = self.deepset(x).unsqueeze(2).permute(2,0,1) # feed X to deep set, to get h0 of RNN
-            #print("Initial hidden shape: {}".format(h0.shape))
             x = x.permute(0,2,1)
+            print("Input shape {}".format(x.shape))
+            h0 = self.set_transformer(x).permute(1,0,2) 
+            print("Initial hidden shape: {}".format(h0.shape))
             #print("RNN input shape {}".format(x.shape))
             y, h = self.gru(x, h0) # call RNN with initial hidden state h0
             return y
@@ -126,23 +114,22 @@ if __name__ == "__main__":
     seq_len = 128
     x_dim = 256
     rnn_hidden_dim = 64
+    rnn_input_dim = 48
 
     model = RNNWithDeepSetInitialization(x_dim, rnn_hidden_dim)
     x = torch.randn(nb,x_dim,seq_len)
     y = model(x)
 
-    model1 = RNNWithSetTransformerInitialization(x_dim, rnn_hidden_dim)
+    model1 = RNNWithSetTransformerInitialization(x_dim, rnn_hidden_dim, rnn_input_dim)
     x1 = torch.randn(nb,x_dim,seq_len)
-    y1 = model(x)
+    y1 = model1(x1)
 
     print("Deep set based:")
     print("RNN output shape {}".format(y.shape))
     print("Parameter count: {}".format(count_parameters(model)))
     print("Parameter count gru only: {}".format(count_parameters(model.gru)))
-
+    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     print("Set transformer based:")
     print("RNN output shape {}".format(y1.shape))
     print("Parameter set transformer only: {}".format(count_parameters(model1.set_transformer)))
 
-
-    # possible recurssion in h0... 
