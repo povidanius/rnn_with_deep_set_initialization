@@ -1,5 +1,5 @@
 # rnn_with_deep_set_initialization
-This repositoruy contains two experimental models: <br /> <br />
+This repository contains two experimental models: <br /> <br />
 
 1. RNNWithDeepSetInitialization and RNNWithSetTransformerInitialization: RNN model with adaptive inital hidden state represented by Deep Set or Set Transformer of input sequence. Hypothesis is that order-independent information (which is hard to extract for RNN) may improve the performance. Set Transformers usually beat Deep Sets on various benchmarks, hence one can hope that it will be more efficient in this model as well.  <br />
 
